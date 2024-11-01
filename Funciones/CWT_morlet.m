@@ -1,6 +1,8 @@
 function [CWT] = CWT_morlet(s, f, sigma, scales, f0)
     x_f = fftshift(fft(s));
     CWT = zeros(length(scales),length(s));
+    N = length(s);
+%     f = 0 : 1 : N -1;
     for k = 1:length(scales)
 
         
@@ -11,5 +13,6 @@ function [CWT] = CWT_morlet(s, f, sigma, scales, f0)
 
         % Inversa de Fourier para obtener la CWT en el dominio del tiempo
         CWT(k, :) = ifft(X_wav_f_analitica);
+        
     end
 end
