@@ -1,4 +1,4 @@
-%%
+addpath('../Funciones');
 %Mexhat
 % Parámetros de muestreo
 Fs = 1000;             % Frecuencia de muestreo
@@ -12,7 +12,7 @@ f = -Fs/2:Fs/N: Fs/2-Fs/N; %Vector de frecuencias
 x1 = cos(2*pi*25*t + 2*pi*100*t.^2);
 x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
 % 
-x = x1%+ x2;
+x = x1 + x2;
 
 % Parámetros de la wavelet sombrero mexicano
 sigma = 1000;           % Parámetro de escala de la Gaussiana

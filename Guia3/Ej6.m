@@ -12,9 +12,14 @@ alpha2 = 3;                 % Parámetro alpha para la entropía de Rényi (caso
 
 % x1 = cos(2*pi*f1*t);                  % Primera señal
 % x2 = cos(2*pi*f2*t);                  % Segunda señal
-x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
-x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
-x = x1 + x2;                          % Señal combinada
+% x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
+% x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
+% x = x1 + x2;                          % Señal combinada
+
+x1 = cos(2*pi*(150*t+ 100/(2*pi)*sin(2*pi*t)));
+x2 = cos(2*pi*(300*t+120/(2*pi)*sin(2*pi*t)));
+
+x = x1 + x2;
 
 P_signal = mean(x.^2);                % Potencia de la señal original
 % Escalar el ruido para diferentes SNR

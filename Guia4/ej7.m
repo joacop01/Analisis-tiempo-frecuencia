@@ -10,11 +10,11 @@ sigma = 1.5;             % Ancho de la protuberancia
 u = 5;                 % Valor central
 
 % Señal de prueba
-x = cos(2*pi*200*t);     % Ejemplo de señal senoidal
-% x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
-% x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
-% 
-% x = x1 + x2;
+%x = cos(2*pi*200*t);     % Ejemplo de señal senoidal
+x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
+x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
+
+x = x1 + x2;
 % FFT de la señal
 x_f = fftshift(fft(x));
 
@@ -43,6 +43,9 @@ for k = 1:length(scales)
 
     % Inversa de Fourier para obtener la CWT en el dominio del tiempo
     CWT(k, :) = ifft(X_wav_f);
+    
+    figure;
+    plot(f, bump);
 end
 
 CWT_analitica = CWT_bump(x, f, 8, linspace(0,1,N), 50);
