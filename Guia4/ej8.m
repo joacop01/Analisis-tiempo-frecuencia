@@ -1,5 +1,8 @@
 %%
 %Morlet
+clear all;
+close all;
+addpath('../Funciones');
 Fs = 1000;             % Frecuencia de muestreo
 Ts = 1/Fs;             % Periodo de muestreo
 t = 0:Ts:1-Ts;         % Vector de tiempo
