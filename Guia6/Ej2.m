@@ -7,7 +7,7 @@ Ts = 1/Fs;             % Periodo de muestreo
 t = 0:Ts:1-Ts;         % Vector de tiempo
 N = length(t);         % Número de puntos en el tiempo
 n = 8;
-indices = round(linspace(0.5/(n+1), 1 - 0.5/(n+1), n) * N);
+% indices = round(linspace(0.5/(n+1), 1 - 0.5/(n+1), n) * N);
 Q = 30;
 cant_crestas = 2;
 
@@ -66,9 +66,10 @@ for w = 1: 10
 
     for u = 1:length(SNR_values)
         F = STFT_Gauss(x_ruido(u,:), t, 1500);
-        [c, F_aux] = Deteccion_Crestas(F, indices, N, cant_crestas, Q);
+        [c, F_aux] = Deteccion_Crestas(F, n, N, cant_crestas, Q);
 
-        if (w < 3)
+        if (w < 2)
+            figure;
             Plot_STFT(F, t, f);
             title(['Detección de cresta con ' num2str(SNR_values(u)) 'dB']);
             hold on;

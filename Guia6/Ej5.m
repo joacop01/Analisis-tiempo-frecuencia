@@ -30,6 +30,7 @@ frec_inst_2 = transpose(frec_inst_2);
 
 F_2 = STFT_Gauss(y, t, 1500);
 
+figure;
 Plot_STFT(F_2, t, f);
 hold on;
 plot(t, frec_inst_1,'r');
@@ -70,7 +71,7 @@ for u = 1:length(SNR_values)
     F = STFT_Gauss(x_ruido(u,:), t, 1250);
     F_g = STFT_Gauss_diff(x_ruido(u,:), t, 1250);
     T = Synchro_STFT(F, F_g, t, N);
-    c = Deteccion_Crestas(T, indices, N, cant_crestas, Q);
+    c = Deteccion_Crestas(T, n, N, cant_crestas, Q);
     Plot_STFT(F, t, f);
     title("STFT");
     Plot_STFT(T, t, f);

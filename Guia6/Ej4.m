@@ -49,9 +49,9 @@ P_noise = zeros(length(SNR_values), 1);
 crestas_1 = zeros(N, 10);
 crestas_2 = zeros(N, 10);
 
-% for w = 1: 10
     
-    for idx = 1:length(SNR_values)
+for idx = 1:length(SNR_values)
+    for w = 1: 10
         snr_db = SNR_values(idx);          % Obtener el valor de SNR actual
 
         % Calcular la potencia del ruido deseada
@@ -67,18 +67,26 @@ crestas_2 = zeros(N, 10);
 
         % Mostrar el valor de la SNR (debería ser cercano a 0 dB)
         disp(['Relación señal-ruido (SNR): ', num2str(SNR), ' dB']);
-    end
 
-    for u = 1:length(SNR_values)
+        u = idx;
+
         F = STFT_Gauss(x_ruido(u,:), t, 1500);
-        c = Deteccion_Crestas(F, indices, N, cant_crestas, Q);
-        Plot_STFT(F, t, f);
-        title(['Detección de cresta con ' num2str(SNR_values(u)) 'dB de ruido']);
-        hold on;
-        plot(t, c(:,1, 1), 'r');
-        plot(t, c(:,2, 1), 'b');
-        legend('Cresta 1','Cresta 2');
-        hold off;
+
+        desvio_std =median(abs(real(F(:))))/0.6745;
+        Q_est = sqrt(2*gammaincinv(.997,1));
+        espectrograma = abs(F).^2;
+        umbral = Q_est * desvio_std;
+        F_somb = F;
+        F_somb (espectrograma < umbral) = 0;
+
+        c = Deteccion_Crestas(F_somb, n, N, cant_crestas, Q);
+    %     Plot_STFT(F, t, f);
+    %     title(['Detección de cresta con ' num2str(SNR_values(u)) 'dB de ruido']);
+    %     hold on;
+    %     plot(t, c(:,1, 1), 'r');
+    %     plot(t, c(:,2, 1), 'b');
+    %     legend('Cresta 1','Cresta 2');
+    %     hold off;
 
 
         ECT1 = sum((abs(c(:,1, 1)-frec_inst_1)).^2)/N;
@@ -89,23 +97,32 @@ crestas_2 = zeros(N, 10);
         P_senial = mean(c(1,:, 1).^2+c(2,:, 1).^2);
         SNR_est = 10 * log10(P_senial / P_noise(u));
         disp(['Relación señal-ruido (SNR) para ',num2str(SNR_values(u)),'dB de ruido ', num2str(SNR_est), ' dB']);
-        
-        desvio_std =median(abs(real(F(:))))/0.6745;
-        Q_est = sqrt(2*gammaincinv(.997,1));
-        espectrograma = abs(F).^2;
-        umbral = Q_est * desvio_std;
-        F_somb = F;
-        F_somb (espectrograma < umbral) = 0;
-        
-        Plot_STFT(F_somb, t, f);
-        hold on;
-        plot(t, c(:,1, 1), 'r');
-        plot(t, c(:,2, 1), 'b');
-        legend('Cresta 1','Cresta 2');
-        title(['Detección de cresta + umbralado con ' num2str(SNR_values(u)) 'dB de ruido']);
-        hold off;
-    
+
+    %     Plot_STFT(F_somb, t, f);
+    %     hold on;
+    %     plot(t, c(:,1, 1), 'r');
+    %     plot(t, c(:,2, 1), 'b');
+    %     legend('Cresta 1','Cresta 2');
+    %     title(['Detección de cresta + umbralado con ' num2str(SNR_values(u)) 'dB de ruido']);
+    %     hold off;
+
+    crestas_1(:,w) = c(:,1);
+    crestas_2(:,w) = c(:,2);
     end
+    figure;
+    subplot(211);
+    boxplot(crestas_1);
+    title('Cresta 1');
+
+    subplot(212);
+    boxplot(crestas_2);
+    title('Cresta 2');
+    
+    sgtitle(['Boxplot para' num2str(SNR_values(idx)) 'dB SNR']);
+        
+
+end
+
     
     
 

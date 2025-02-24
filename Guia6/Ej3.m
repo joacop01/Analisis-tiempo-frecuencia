@@ -7,14 +7,12 @@ Ts = 1/Fs;             % Periodo de muestreo
 t = 0:Ts:1-Ts;         % Vector de tiempo
 N = length(t);         % Número de puntos en el tiempo
 n = 8;
-indices = round(linspace(0.5/(n+1), 1 - 0.5/(n+1), n) * N);
+% indices = round(linspace(0.5/(n+1), 1 - 0.5/(n+1), n) * N);
 Q = 30;
 f = 0 : Fs/N : Fs/2-Fs/N;  % Vector de frecuencias
 x1 = cos(2*pi*(150*t+ (100/(2*pi))*sin(2*pi*t)));
 x2 = cos(2*pi*(300*t+(120/(2*pi))*sin(2*pi*t)));
 
-crestas_1 = zeros(N, 10);
-crestas_2 = zeros(N, 10);
 
 x = x1 + 0.25*x2;
 
@@ -52,9 +50,8 @@ P_noise = zeros(length(SNR_values), 1);
 crestas_1 = zeros(N, 10);
 crestas_2 = zeros(N, 10);
 
-for w = 1: 10
-    
-    for idx = 1:length(SNR_values)
+for idx = 1:length(SNR_values)
+    for w = 1: 10
         snr_db = SNR_values(idx);          % Obtener el valor de SNR actual
 
         % Calcular la potencia del ruido deseada
@@ -70,19 +67,20 @@ for w = 1: 10
 
         % Mostrar el valor de la SNR (debería ser cercano a 0 dB)
         disp(['Relación señal-ruido (SNR): ', num2str(SNR), ' dB']);
-    end
 
-    for u = 1:length(SNR_values)
+        u = idx;
+
         F = STFT_Gauss(x_ruido(u,:), t, 1500);
-        c = Deteccion_Crestas(F, indices, N, cant_crestas, Q);
+        c = Deteccion_Crestas(F, n, N, cant_crestas, Q);
         if w < 2
-            Plot_STFT(F, t, f);
-            title(['Detección de cresta con ' num2str(SNR_values(u)) 'dB']);
-            hold on;
-            plot(t, c(:,1, 1), 'r');
-            plot(t, c(:,2, 1), 'b');
-            legend('Cresta 1','Cresta 2');
-            hold off;
+%             figure;
+%             Plot_STFT(F, t, f);
+%             title(['Detección de cresta con ' num2str(SNR_values(u)) 'dB']);
+%             hold on;
+%             plot(t, c(:,1, 1), 'r');
+%             plot(t, c(:,2, 1), 'b');
+%             legend('Cresta 1','Cresta 2');
+%             hold off;
         end
 
         ECT1_a = sum((abs(c(:,1)-frec_inst_1)).^2)/N;
@@ -109,11 +107,11 @@ for w = 1: 10
         y = size(x);
         b = 20;
         for i =1:N
-            
+
             I = c(i, modo_1) - b : c(i, modo_1) + b;
-            
+
             I = max(I(1), 1):min(I(end), N/2);
-            
+
             y(i) = sum(real(F(I,i)))/(N/2);
         end
 
@@ -122,35 +120,31 @@ for w = 1: 10
 
 
         if w < 2
-            Plot_STFT(F, t, f);
-            hold on;
-            plot(t, c(:,1, 1), 'r');
-            plot(t, c(:,2, 1), 'b');
-            plot(t, I,'r');
-            plot(t, I_2,'r');
-            legend('Cresta 1','Cresta 2');
-            hold off;
+%             figure;
+%             Plot_STFT(F, t, f);
+%             hold on;
+%             plot(t, c(:,1, 1), 'r');
+%             plot(t, c(:,2, 1), 'b');
+%             plot(t, I,'r');
+%             plot(t, I_2,'r');
+%             legend('Cresta 1','Cresta 2');
+%             hold off;
 
-
-            figure;
-            plot(t, real(y));
-            hold on;
-            plot(t, real(x1));
-            legend('Reconstrucción', 'Original');
-            hold off;
         end
-
-
-
-    end
     crestas_1(:,w) = c(:,1);
     crestas_2(:,w) = c(:,2);
+    end
+    figure;
+    subplot(211);
+    boxplot(crestas_1);
+    title('Cresta 1');
 
+    subplot(212);
+    boxplot(crestas_2);
+    title('Cresta 2');
+    
+    sgtitle(['Boxplot para' num2str(SNR_values(idx)) 'dB SNR']);
+        
 
 end
 
-figure;
-boxplot(crestas_1);
-
-figure;
-boxplot(crestas_2);
