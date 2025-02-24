@@ -1,57 +1,50 @@
-Fs = 1000;                  % Frecuencia de muestreo
-Ts = 1/Fs;                  % Intervalo de muestreo
-t = 0:Ts:1-Ts;              % Vector de tiempo
-N = length(t);              % Longitud de la señal
-% Vector de frecuencias
-k = (-Fs/2:Fs/N:Fs/2 - Fs/N);               % Vector de frecuencias centrado
+clear all;          % Limpia todas las variables del espacio de trabajo
+close all;          % Cierra todas las figuras abiertas
 
-sigma = 300;                   % Parámetro de la ventana gaussiana
-f1 = 50;                    % Frecuencia de la señal
-f2 = 100;                   % Frecuencia de la señal
-% Crear la señal
+Fs = 1000;          % Frecuencia de muestreo en Hz
+Ts = 1/Fs;          % Período de muestreo en segundos
+t = 0:Ts:1-Ts;      % Vector de tiempo de 1 segundo de duración
+N = length(t);      % Número total de muestras
 
-x = zeros(1, N);                % Inicializar la señal con ceros
-half_point = round(N / 2);       % Punto intermedio del tiempo
+k = (-Fs/2:Fs/N:Fs/2 - Fs/N);  % Vector de frecuencias centrado en cero
 
-% Primera mitad de la señal (10 Hz)
-x(1:half_point) = cos(2*pi*f1*t(1:half_point));
+sigma = 300;        % Parámetro de dispersión para la ventana gaussiana
+f1 = 50;            % Frecuencia de la primera señal (en Hz)
+f2 = 100;           % Frecuencia de la segunda señal (en Hz)
 
-% Segunda mitad de la señal (30 Hz)
-x(half_point+1:end) = cos(2*pi*f2*t(half_point+1:end));
+x = zeros(1, N);    % Inicialización de la señal
+half_point = round(N / 2);  % Punto medio del vector de tiempo
 
-x_f = fftshift(fft(x));
-% Parámetros para la STFT
-STFT = zeros(N, N);         % Matriz para almacenar el resultado de la STFT
-l = length(t) / 2;          % Ventana centrada
+% Construcción de la señal: combinación de dos cosenos de diferente frecuencia
+x(1:half_point) = cos(2*pi*f1*t(1:half_point));       % Primera mitad con f1
+x(half_point+1:end) = cos(2*pi*f2*t(half_point+1:end)); % Segunda mitad con f2
 
+x_f = (fft(x));     % Transformada de Fourier de la señal completa
 
-% Calcular la STFT
+STFT = zeros(N, N); % Inicialización de la matriz para la STFT
+
+% Cálculo de la STFT mediante una ventana gaussiana
 for f = 1:N
-    % Desplazamiento de la ventana
-    g = sqrt(pi/sigma)*exp((-pi*(k-k(f)).^2)/sigma);                 % Ventana gaussiana
-    x_v = x_f .* g;                           % Multiplicación de la señal por la ventana
-    STFT(f, :) = ifft(x_v);        % FFT y fftshift para centrar la frecuencia
+    g = sqrt(pi/sigma) * exp((-pi * (k - k(f)).^2) / sigma); % Ventana gaussiana centrada en k(f)
+    x_v = x_f .* g;         % Aplicación de la ventana en el dominio de la frecuencia
+    STFT(f, :) = ifft(x_v); % Transformada inversa para obtener la STFT en el tiempo
 end
 
-k_2 = 0: Fs/N: Fs/2 -1;
-%Graficar la señal original y su STFT
+k_2 = 0: Fs/N: Fs/2 - 1;    % Vector de frecuencias positivas para la visualización
+
+% Gráficos de resultados
 figure;
-subplot(2,1,1);
-plot(k, abs(x_v));
-hold on;
-plot(k, g);
+subplot(2,1,1);             % Primer subplot: dominio de la frecuencia
+plot(k(N/2:end), x_f(N/2:end)); % Espectro de la señal (parte positiva)
 title('Señal en la frecuencia');
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
 
-% Mostrar el espectrograma (STFT en función del tiempo y frecuencia)
-subplot(2,1,2);
-imagesc(t, k_2, abs(STFT(N/2+1:end, :)));   % Magnitud de la STFT
+subplot(2,1,2);             % Segundo subplot: espectrograma (STFT)
+imagesc(t, k_2, abs(STFT(N/2+1:end, :))); % Representación de la magnitud de la STFT
+set(gca, 'YDir', 'reverse'); % Invertir el eje Y para mostrar frecuencias más bajas arriba
 
-% Invertir el eje de frecuencias (frecuencias más altas abajo)
-set(gca, 'YDir', 'reverse');  % Ahora las frecuencias altas estarán abajo
-
-xlabel('Tiempo (s)');
-ylabel('Frecuencia (Hz)');
-title('|STFT| ');
-colorbar;
+xlabel('Tiempo (s)');       % Etiqueta del eje X
+ylabel('Frecuencia (Hz)');  % Etiqueta del eje Y
+title('|STFT|');            % Título del gráfico
+colorbar;                   % Barra de colores para indicar la magnitud

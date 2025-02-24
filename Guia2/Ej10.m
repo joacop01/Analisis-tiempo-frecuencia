@@ -1,21 +1,28 @@
-addpath('C:\Repositorios\Curso Análisis Tiempo-Frecuencia\Funciones');
-Fs = 1000;
-Ts = 1/Fs;
-t = 0: Ts: 1-Ts;
+% Agregar la carpeta de funciones al path de MATLAB
+addpath('C:\Repositorios\Analisis Tiempo Frecuencia y Descomposicion de Señales\Funciones');
 
-x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
-x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
-x = x1 + x2;
+% Definición de parámetros de muestreo
+Fs = 1000;         % Frecuencia de muestreo (Hz)
+Ts = 1/Fs;         % Período de muestreo (s)
+t = 0:Ts:1-Ts;     % Vector de tiempo de 1 segundo
 
-% Calcular la potencia de la señal
-P_signal = mean(x.^2);  % Potencia de la señal original
+% Generación de dos señales cosenoidales con modulación en frecuencia
+x1 = cos(2*pi*100*t + 2*pi*100*t.^2);  % Señal 1: frecuencia base 100 Hz
+x2 = cos(2*pi*150*t + 2*pi*100*t.^2);  % Señal 2: frecuencia base 150 Hz
+x = x1 + x2;                           % Señal compuesta
+
+% Calcular la potencia de la señal original
+P_signal = mean(x.^2);  % Potencia de la señal (media del cuadrado de la amplitud)
+
 % Generar ruido gaussiano con la misma potencia que la señal
-ruido_gaussiano = sqrt(P_signal) * randn(size(x));  % Escalar el ruido para que tenga la misma potencia
-P_noise = mean(ruido_gaussiano.^2);  % Potencia del ruido
-SNR = 10 * log10(P_signal / P_noise);
-% Mostrar el valor de la SNR (debería ser cercano a 0 dB)
+ruido_gaussiano = sqrt(P_signal) * randn(size(x));  % Ruido blanco gaussiano
+P_noise = mean(ruido_gaussiano.^2);                % Potencia del ruido
+
+% Calcular la relación señal-ruido (SNR)
+SNR = 10 * log10(P_signal / P_noise);  % SNR en decibelios (dB)
 disp(['Relación señal-ruido (SNR): ', num2str(SNR), ' dB']);
 
+% Visualización de la señal original y la señal ruidosa
 figure;
 subplot(2,1,1);
 plot(t, x);
@@ -23,7 +30,8 @@ title('Señal Original');
 xlabel('Tiempo (s)');
 ylabel('Amplitud');
 
-x = x +ruido_gaussiano;
+% Añadir ruido gaussiano a la señal original
+x = x + ruido_gaussiano;
 
 subplot(2,1,2);
 plot(t, x);
@@ -31,28 +39,36 @@ title('Señal ruidosa');
 xlabel('Tiempo (s)');
 ylabel('Amplitud');
 
-STFT_gauss = STFT_Gauss(x, t, 200);
-STFT_hann = STFT_Hann(x, t, 0.2);
+% Cálculo de la Transformada de Fourier de Tiempo Corto (STFT)
+STFT_gauss = STFT_Gauss(x, t, 200);  % STFT usando ventana Gaussiana 
+STFT_hann = STFT_Hann(x, t, 0.2);    % STFT usando ventana de Hann
 
-k = 0:Fs/N: Fs/2 - Fs/N;                    % Frecuencias positivas
+% Definición del vector de frecuencias positivas
+N = length(t);                       % Número de muestras
+k = 0:Fs/N:Fs/2 - Fs/N;              % Vector de frecuencias (Hz)
 
-% Mostrar el espectrograma (STFT en función del tiempo y frecuencia)
+% Visualización de los espectrogramas (magnitud de la STFT)
 figure;
-subplot(211);
-imagesc(t, k, abs(STFT_gauss));   % Magnitud de la STFT
-% Invertir el eje de frecuencias (frecuencias más altas abajo)
-set(gca, 'YDir', 'reverse');  % Ahora las frecuencias altas estarán abajo
+
+% Espectrograma con ventana Gaussiana
+subplot(2,1,1);
+imagesc(t, k, abs(STFT_gauss));      % Magnitud de la STFT
+set(gca, 'YDir', 'reverse');         % Invertir eje Y para mostrar frecuencias altas abajo
 xlabel('Tiempo (s)');
 ylabel('Frecuencia (Hz)');
 title('Espectrograma STFT con ventana Gaussiana');
-colorbar;
+colorbar;                            % Barra de color para la magnitud
 
-% Mostrar el espectrograma (STFT en función del tiempo y frecuencia)
-subplot(212);
-imagesc(t, k, abs(STFT_hann));   % Magnitud de la STFT
-% Invertir el eje de frecuencias (frecuencias más altas abajo)
-set(gca, 'YDir', 'reverse');  % Ahora las frecuencias altas estarán abajo
+% Espectrograma con ventana de Hann
+subplot(2,1,2);
+imagesc(t, k, abs(STFT_hann));       % Magnitud de la STFT
+set(gca, 'YDir', 'reverse');         % Invertir eje Y para mostrar frecuencias altas abajo
 xlabel('Tiempo (s)');
 ylabel('Frecuencia (Hz)');
 title('Espectrograma STFT con ventana de Hann');
-colorbar;
+colorbar;                            % Barra de color para la magnitud
+
+
+%Comentario:
+%Se observa que con ambas STFT (ventana Gaussiana y ventana de Hann) se
+%obtiene un resultado muy similar.

@@ -1,57 +1,67 @@
-Fs = 1000;                  % Frecuencia de muestreo
-Ts = 1/Fs;                  % Intervalo de muestreo
-t = 0:Ts:1-Ts;              % Vector de tiempo
-N = length(t);              % Longitud de la señal
-% Vector de frecuencias
-k = (-Fs/2:Fs/N:Fs/2 - Fs/N);               % Vector de frecuencias centrado
+% Limpiar el espacio de trabajo y cerrar figuras abiertas
+clear all;
+close all;
 
-f1 = 200;                    % Frecuencia de la señal
-f2 = 100;                   % Frecuencia de la señal
-% Crear la señal
+% Definición de parámetros de muestreo
+Fs = 1000;                 % Frecuencia de muestreo (Hz)
+Ts = 1/Fs;                 % Periodo de muestreo (s)
+t = 0:Ts:1-Ts;             % Vector de tiempo de 1 segundo de duración
+N = length(t);             % Número de muestras
+k = (-Fs/2:Fs/N:Fs/2 - Fs/N);  % Vector de frecuencias centrado en cero
 
-x = zeros(1, N);                % Inicializar la señal con ceros
-half_point = round(N / 2);       % Punto intermedio del tiempo
+% Frecuencias de las señales
+f1 = 200;                  % Frecuencia de la primera señal (Hz)
+f2 = 100;                  % Frecuencia de la segunda señal (Hz)
 
-% Primera mitad de la señal (10 Hz)
-x(1:half_point) = cos(2*pi*f1*t(1:half_point));
+% Inicialización de la señal
+x = zeros(1, N);           % Vector de ceros para la señal
+half_point = round(N / 2); % Punto medio del vector de tiempo
 
-% Segunda mitad de la señal (30 Hz)
-x(half_point+1:end) = cos(2*pi*f2*t(half_point+1:end));
+% Construcción de la señal con dos frecuencias diferentes en la primera y segunda mitad
+x(1:half_point) = cos(2*pi*f1*t(1:half_point));        % Primera mitad con frecuencia f1
+x(half_point+1:end) = cos(2*pi*f2*t(half_point+1:end)); % Segunda mitad con frecuencia f2
 
-x_f = fftshift(fft(x));
-% Parámetros para la STFT
-STFT = zeros(N, N);         % Matriz para almacenar el resultado de la STFT
-l = length(t) / 2;          % Ventana centrada
-T = 0.2;
+% Transformada de Fourier de la señal y centrado del espectro
+x_f = fftshift(fft(x));    % Aplicación de la FFT y desplazamiento del espectro
 
-% Calcular la STFT
-for f = 1:N                           % Desplazamiento de la ventana
+% Inicialización de la matriz para la STFT (Short-Time Fourier Transform)
+STFT = zeros(N, N);        % Matriz para almacenar los resultados de la STFT
+l = length(t) / 2;         % Mitad de la longitud de la señal
+T = 0.2;                   % Ancho de la ventana temporal
+
+% Cálculo de la STFT utilizando una ventana basada en funciones sinc
+for f = 1:N
+    % Definición de la ventana espectral usando combinaciones de funciones sinc
     g = 1/2 * T * sinc((k-k(f))*T) + 1/4*T * sinc(((k-k(f))-1/T) *T) + 1/4*T * sinc((k-k(f)+1/T) *T);
-    x_v = x_f .* g;                           % Multiplicación de la señal por la ventana
-    STFT(f, :) = ifft(x_v);        % FFT y fftshift para centrar la frecuencia
+    
+    % Filtrado de la señal en el dominio de la frecuencia
+    x_v = x_f .* g;                           
+    
+    % Transformada inversa de Fourier para obtener la señal filtrada en el dominio temporal
+    STFT(f, :) = ifft(x_v);        
 end
 
-figure;
-plot(k, g);
-hold on;
-plot(k, x_v);
-hold off;
+% Definición del vector de frecuencias positivas
 k_2 = 0: Fs/N: Fs/2 -1;
-%Graficar la señal original y su STFT
+
+% Visualización de los resultados
 figure;
+
+% Representación de la señal en el dominio de la frecuencia
 subplot(2,1,1);
 plot(k_2, abs(x_f(N/2+1:end)));
 title('Señal en la frecuencia');
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
 
-% Mostrar el espectrograma (STFT en función del tiempo y frecuencia)
+% Representación del espectrograma (STFT)
 subplot(2,1,2);
-imagesc(t, k_2, abs(STFT(N/2+1:end,:)));   % Magnitud de la STFT
-% Invertir el eje de frecuencias (frecuencias más altas abajo)
-set(gca, 'YDir', 'reverse');  % Ahora las frecuencias altas estarán abajo
+imagesc(t, k_2, abs(STFT(N/2+1:end,:)));  % Magnitud de la STFT
+
+% Invertir el eje de frecuencias para mostrar frecuencias más altas abajo
+set(gca, 'YDir', 'reverse'); 
 
 xlabel('Tiempo (s)');
 ylabel('Frecuencia (Hz)');
-title('Espectrograma STFT');
+title('|STFT|');
 colorbar;
