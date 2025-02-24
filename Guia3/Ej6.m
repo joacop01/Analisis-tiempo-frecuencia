@@ -1,25 +1,23 @@
+clear all;
+close all;
+
 Fs = 1000;                  % Frecuencia de muestreo
 Ts = 1/Fs;                  % Intervalo de muestreo
 t = 0:Ts:1-Ts;              % Vector de tiempo
 N = length(t);              % Longitud de la señal
 k = 200;                    % Parámetro de la ventana gaussiana
-len = 0.1:0.01:1;           % Diferentes longitudes de la ventana
+len = 0.05:0.01:1;           % Diferentes longitudes de la ventana
 sigma = 18 ./ len.^2;       % Parámetro sigma para cada longitud de ventana
 f1 = 100;                   % Frecuencia de la primera señal
 f2 = 150;                   % Frecuencia de la segunda señal
 alpha1 = 2;                 % Parámetro alpha para la entropía de Rényi (caso 1)
 alpha2 = 3;                 % Parámetro alpha para la entropía de Rényi (caso 2)
 
-% x1 = cos(2*pi*f1*t);                  % Primera señal
-% x2 = cos(2*pi*f2*t);                  % Segunda señal
-% x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
-% x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
-% x = x1 + x2;                          % Señal combinada
+x1 = cos(2*pi*100*t + 2*pi*100*t.^2);
+x2 = cos(2*pi*150*t + 2*pi*100*t.^2);
+x = x1 + x2;                          % Señal combinada
 
-x1 = cos(2*pi*(150*t+ 100/(2*pi)*sin(2*pi*t)));
-x2 = cos(2*pi*(300*t+120/(2*pi)*sin(2*pi*t)));
 
-x = x1 + x2;
 
 P_signal = mean(x.^2);                % Potencia de la señal original
 % Escalar el ruido para diferentes SNR
@@ -91,26 +89,9 @@ for u = 1:length(SNR_values)
     subplot(2, 1, 2);
     plot(t, x_ruido(u, :), 'LineWidth', 1.5);
     title(['Señal Ruidosa (SNR =',num2str(SNR_values(u)),'dB)']);
-%     title(['Espectrograma de la señal ruidosa (SNR = ', num2str(SNR_values(u)), ' dB) - Longitud Óptima de Ventana']);
     xlabel('Tiempo (s)');
     ylabel('Amplitud');
     grid on;
-
-    % % Subplot para la señal ruidosa con SNR = -5 dB
-    % subplot(4, 1, 3);
-    % plot(t, x_ruido(2, :), 'LineWidth', 1.5);
-    % title('Señal Ruidosa (SNR = -5 dB)');
-    % xlabel('Tiempo (s)');
-    % ylabel('Amplitud');
-    % grid on;
-    % 
-    % % Subplot para la señal ruidosa con SNR = -10 dB
-    % subplot(4, 1, 4);
-    % plot(t, x_ruido(3, :), 'LineWidth', 1.5);
-    % title('Señal Ruidosa (SNR = -10 dB)');
-    % xlabel('Tiempo (s)');
-    % ylabel('Amplitud');
-    % grid on;
 
     % Graficar la entropía de Rényi en función de la longitud de la ventana
     figure;
@@ -147,10 +128,6 @@ for u = 1:length(SNR_values)
     title('Señal en el tiempo');
     xlabel('Tiempo (s)');
     ylabel('Amplitud');
-    %hold on;
-    %plot(t, g);
-    %title('Ventana gaussiana');
-    %hold off;
 
     % Mostrar el espectrograma (STFT en función del tiempo y frecuencia)
     subplot(2,1,2);
@@ -195,3 +172,7 @@ for u = 1:length(SNR_values)
     hold off;
     
 end
+
+
+%Comentario: Se observa que la marginaliazción del espectrograma es una
+%versión suavizada del espectro de potencia de la señal.
