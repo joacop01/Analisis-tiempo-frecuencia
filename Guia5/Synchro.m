@@ -6,7 +6,7 @@ Fs = 1000;       % Frecuencia de muestreo
 Ts = 1/Fs;       % Periodo de muestreo
 t = 0:Ts:1-Ts;   % Eje temporal
 k = 1500;         % Parámetro de ventana
-f0 = 1;        % Frecuencia de la señal
+f0 = 50;        % Frecuencia de la señal
 N = length(t);   % Número de puntos
 f = 0: Fs/N : Fs/2 - Fs/N;
 
@@ -15,8 +15,8 @@ f = 0: Fs/N : Fs/2 - Fs/N;
 % x = x1 + x2;
 x1 = cos(2*pi*(150*t+ 100/(2*pi)*sin(2*pi*t)));
 x2 = cos(2*pi*(300*t+120/(2*pi)*sin(2*pi*t)));
-
 x = x1 + x2;
+
 
 % a = 100;
 % phi = sin(2*pi*f0*t); 
@@ -39,8 +39,12 @@ F_g = STFT_Gauss_diff(x, t, k);
 T = Synchro_STFT(F, F_g, t, N);
 
 % Graficar la STFT
+figure;
+subplot(211);
 Plot_STFT(F, t, f);
 title("|STFT|");
+
+subplot(212);
 Plot_STFT(T, t, f);
 title('|Synchorsqueezed STFT|');
 
