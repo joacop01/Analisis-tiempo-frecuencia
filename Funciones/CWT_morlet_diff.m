@@ -1,5 +1,6 @@
-function [CWT] = CWT_morlet_diff(s, f, sigma, scales, f0)
+function [CWT] = CWT_morlet_diff(s, f,  sigma, scales, f0)
     x_f = fftshift(fft(s));
+    N = length(s);
     CWT = zeros(length(scales),length(s));
     for k = 1:length(scales)
 

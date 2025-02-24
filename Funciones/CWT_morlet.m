@@ -1,8 +1,7 @@
-function [CWT] = CWT_morlet(s, f, sigma, scales, f0)
+function [CWT] = CWT_morlet(s,f, sigma, scales, f0)
     x_f = fftshift(fft(s));
     CWT = zeros(length(scales),length(s));
     N = length(s);
-%     f = 0 : 1 : N -1;
     for k = 1:length(scales)
 
         

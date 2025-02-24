@@ -1,5 +1,6 @@
-function [crestas, F_aux] = Deteccion_Crestas(F, indices, N, cant_crestas, Q)
-
+function [crestas, F_aux] = Deteccion_Crestas(F, n, N, cant_crestas, Q)
+   
+    indices = round(linspace(0.5/(n+1), 1 - 0.5/(n+1), n) * N);
     c = zeros(N, cant_crestas, length(indices));
     energia = zeros(cant_crestas, 1);
     indice_max = zeros(cant_crestas, 1); 

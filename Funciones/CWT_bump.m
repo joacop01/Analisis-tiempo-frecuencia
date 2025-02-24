@@ -16,7 +16,6 @@ function [CWT] = CWT_bump(s, f, sigma, scales, u)
         bump_analitica(f*scales(k) < 0) = 0;  % Poner 0 donde f es negativo
         bump_analitica(f*scales(k) > 0) = 2*bump_analitica(f*scales(k) > 0);
 
-
         X_wav_f_analitica = x_f .* conj(bump_analitica);
 
         % Inversa de Fourier para obtener la CWT en el dominio del tiempo
