@@ -1,37 +1,18 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { Book } from "../data/books";
 import { COVER_W, faceFont } from "./bookFaces";
+import { HOVER_CARD_MS, HOVER_MS } from "./motion";
 
 const HOVER_PULL = 96;
 const HOVER_LIFT = -26;
 const LEAVE_GRACE_MS = 90;
 
-const mix = (token: string, pct: number) => `color-mix(in oklch, var(${token}) ${pct}%, transparent)`;
+/** The shelf only ever shows a cover as a thin strip or a foreshortened plane: use the medium size there. */
+export const shelfCover = (url: string) => url.replace(/-L\.jpg$/, "-M.jpg");
 
-// Cylindrical highlight across the spine, by surface material.
-const finishSheen: Record<Book["finish"], string> = {
-  gloss: `linear-gradient(90deg, ${mix("--shade", 42)} 0%, transparent 16%, ${mix("--light", 42)} 30%, ${mix("--light", 8)} 40%, transparent 58%, ${mix("--shade", 34)} 100%)`,
-  matte: `linear-gradient(90deg, ${mix("--shade", 36)} 0%, transparent 20%, ${mix("--light", 14)} 34%, transparent 60%, ${mix("--shade", 30)} 100%)`,
-  cloth: `linear-gradient(90deg, ${mix("--shade", 40)} 0%, transparent 22%, ${mix("--light", 9)} 38%, transparent 62%, ${mix("--shade", 36)} 100%)`,
-};
-
-const NOISE =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
-
-// Material grain laid over the lettering, so the type reads as printed into it.
-const finishTexture: Record<Book["finish"], CSSProperties> = {
-  cloth: {
-    backgroundImage: `repeating-linear-gradient(0deg, ${mix("--shade", 22)} 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, ${mix("--light", 14)} 0 1px, transparent 1px 3px)`,
-    opacity: 0.55,
-    mixBlendMode: "multiply",
-  },
-  matte: { backgroundImage: NOISE, opacity: 0.22, mixBlendMode: "multiply" },
-  gloss: {
-    backgroundImage: `linear-gradient(180deg, ${mix("--light", 10)}, transparent 30%, transparent 70%, ${mix("--light", 6)})`,
-    opacity: 1,
-  },
-};
+// The constant surface layers (material texture, cylindrical sheen, wear, edges) are classes in styles.css;
+// only per-book values stay inline.
 
 function publisherMark(publisher: string): string {
   return publisher
@@ -44,13 +25,22 @@ function publisherMark(publisher: string): string {
 }
 
 /** The front cover: real art, or a typeset card when there is none. */
-export function CoverFace({ book, className = "" }: { book: Book; className?: string }) {
+export function CoverFace({
+  book,
+  src = book.cover,
+  className = "",
+}: {
+  book: Book;
+  src?: string;
+  className?: string;
+}) {
   if (book.cover) {
     return (
       <img
-        src={book.cover}
+        src={src}
         alt=""
         draggable={false}
+        decoding="async"
         className={`h-full w-full object-cover ${className}`}
         style={{ backgroundColor: book.spine }}
       />
@@ -72,8 +62,15 @@ export function CoverFace({ book, className = "" }: { book: Book; className?: st
   );
 }
 
+type BookBodyProps = {
+  book: Book;
+  showPages?: boolean;
+  /** Front-cover art; defaults to the shelf size (the detail view passes the large one). */
+  coverSrc?: string;
+};
+
 /** The book as a 3D object: spine face, hinged covers and the page block. */
-export function BookBody({ book, showPages = true }: { book: Book; showPages?: boolean }) {
+export const BookBody = memo(function BookBody({ book, showPages = true, coverSrc }: BookBodyProps) {
   const { width: w, height: h } = book;
   const showAuthor = w >= 44;
   const showMark = w >= 30;
@@ -81,16 +78,17 @@ export function BookBody({ book, showPages = true }: { book: Book; showPages?: b
   const rule = book.band ?? book.ink;
   const lettering: CSSProperties = { color: book.ink, opacity: 1 - book.wear * 0.45 };
   const mark = showMark ? publisherMark(book.publisher) : "";
+  const art = book.cover ? shelfCover(book.cover) : "";
 
   return (
     <span className="absolute inset-0 block [transform-style:preserve-3d]">
       {/* Spine face */}
       <span className="absolute inset-0 block overflow-hidden rounded-[1.5px]" style={{ backgroundColor: book.spine }}>
-        {book.cover && !book.spineImage && (
+        {art && !book.spineImage && (
           <span
             className="absolute inset-0"
             style={{
-              backgroundImage: `url("${book.cover}")`,
+              backgroundImage: `url("${art}")`,
               backgroundSize: "auto 100%",
               backgroundPosition: "left center",
             }}
@@ -146,74 +144,45 @@ export function BookBody({ book, showPages = true }: { book: Book; showPages?: b
           </>
         )}
 
-        <span className="absolute inset-0" style={finishTexture[book.finish]} />
-        <span className="absolute inset-0" style={{ backgroundImage: finishSheen[book.finish] }} />
-        <span
-          className="absolute inset-0"
-          style={{
-            opacity: book.wear,
-            backgroundImage: `linear-gradient(180deg, ${mix("--light", 55)} 0%, transparent 10%, transparent 90%, ${mix("--light", 45)} 100%), linear-gradient(90deg, ${mix("--light", 35)} 0%, transparent 7%, transparent 93%, ${mix("--light", 35)} 100%), linear-gradient(180deg, ${mix("--glow", 30)}, transparent 55%)`,
-          }}
-        />
-        <span
-          className="absolute inset-0 rounded-[1.5px]"
-          style={{ boxShadow: `inset 1px 0 0 ${mix("--light", 18)}, inset -1px 0 0 ${mix("--shade", 30)}` }}
-        />
+        {/* Material grain laid over the lettering, so the type reads as printed into it. */}
+        <span className={`absolute inset-0 spine-texture-${book.finish}`} />
+        <span className={`absolute inset-0 spine-sheen-${book.finish}`} />
+        <span className="absolute inset-0 spine-wear" style={{ opacity: book.wear }} />
+        <span className="absolute inset-0 rounded-[1.5px] spine-edge" />
       </span>
 
       {/* Front cover, hinged at the spine's right edge */}
       <span
-        className="absolute left-full top-0 block overflow-hidden rounded-r-[2px]"
-        style={{ width: COVER_W, height: h, transformOrigin: "left center", transform: "rotateY(90deg)" }}
+        className="absolute left-full top-0 block overflow-hidden rounded-r-[2px] book-front"
+        style={{ width: COVER_W, height: h }}
       >
-        <CoverFace book={book} />
-        <span
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `linear-gradient(90deg, ${mix("--shade", 38)} 0%, ${mix("--light", 12)} 3%, transparent 9%, transparent 85%, ${mix("--shade", 12)} 100%)`,
-          }}
-        />
+        <CoverFace book={book} src={coverSrc ?? art} />
+        <span className="absolute inset-0 book-front-shade" />
       </span>
 
       {/* Back cover */}
       <span
-        className="absolute right-full top-0 block"
-        style={{
-          width: COVER_W,
-          height: h,
-          transformOrigin: "right center",
-          transform: "rotateY(-90deg)",
-          backgroundColor: book.spine,
-          backgroundImage: `linear-gradient(270deg, ${mix("--shade", 45)} 0%, transparent 12%, ${mix("--shade", 25)} 100%)`,
-        }}
+        className="absolute right-full top-0 block book-back"
+        style={{ width: COVER_W, height: h, backgroundColor: book.spine }}
       />
 
       {/* Page block on top; hardcovers get a headband */}
       {showPages && (
         <span
-          className="absolute bottom-full left-[1px] block"
-          style={{
-            width: w - 2,
-            height: COVER_W - 6,
-            transformOrigin: "bottom center",
-            transform: "rotateX(78deg)",
-            backgroundColor: "var(--paper)",
-            backgroundImage: `repeating-linear-gradient(90deg, ${mix("--shade", 7)} 0 1px, transparent 1px 2px), linear-gradient(0deg, ${mix("--shade", 18)}, transparent 40%)`,
-          }}
+          className="absolute bottom-full left-[1px] block book-pages"
+          style={{ width: w - 2, height: COVER_W - 6 }}
         >
           {book.binding === "hardcover" && (
             <span
-              className="absolute inset-x-0 bottom-0 h-[3px]"
-              style={{
-                backgroundImage: `repeating-linear-gradient(90deg, ${rule} 0 2px, var(--paper) 2px 3px)`,
-              }}
+              className="absolute inset-x-0 bottom-0 h-[3px] book-headband"
+              style={{ "--band": rule } as CSSProperties}
             />
           )}
         </span>
       )}
     </span>
   );
-}
+});
 
 function Stars({ rating }: { rating: number }) {
   if (!rating) return <span>Unrated</span>;
@@ -225,14 +194,22 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+/** Whether a spine's centre is within the window (the edge fades hide anything less). */
+const onScreen = (r: DOMRect) => r.left + r.width / 2 > 0 && r.left + r.width / 2 < window.innerWidth;
+
 function HoverCard({ book, anchor }: { book: Book; anchor: DOMRect }) {
   const half = 124;
   const left = Math.min(Math.max(anchor.left + anchor.width / 2, half + 8), window.innerWidth - half - 8);
   return createPortal(
     <div
       role="tooltip"
-      className="pointer-events-none fixed z-[100] w-[248px] animate-fade-in rounded-xl border border-border/70 bg-card/90 px-4 py-3 shadow-[0_24px_60px_-28px_var(--shade)] backdrop-blur-md [animation-duration:240ms]"
-      style={{ left, top: anchor.top - 14, transform: `translate(-50%, calc(-100% + ${HOVER_LIFT}px))` }}
+      className="pointer-events-none fixed z-[100] w-[248px] animate-fade-in rounded-xl border border-border/70 bg-card/90 px-4 py-3 shadow-[0_24px_60px_-28px_var(--shade)] backdrop-blur-md"
+      style={{
+        animationDuration: `${HOVER_CARD_MS}ms`,
+        left,
+        top: anchor.top - 14,
+        transform: `translate(-50%, calc(-100% + ${HOVER_LIFT}px))`,
+      }}
     >
       <p className="font-display text-[20px] leading-tight text-card-foreground">{book.title}</p>
       <p className="mt-1 text-[15px] text-muted-foreground">{book.author}</p>
@@ -252,22 +229,46 @@ function HoverCard({ book, anchor }: { book: Book; anchor: DOMRect }) {
 
 type BookSpineProps = {
   book: Book;
+  /** Position in the shelf row, handed back to `onOpen`. */
+  pos: number;
+  /** False keeps only the sized, empty slot: the shelf builds the books near the viewport. */
+  built?: boolean;
   pulled?: boolean;
   className?: string;
-  onOpen: (button: HTMLButtonElement) => void;
+  onOpen: (pos: number, button: HTMLButtonElement) => void;
   shouldIgnoreClick?: () => boolean;
 };
 
-export function BookSpine({ book, pulled = false, className = "", onOpen, shouldIgnoreClick }: BookSpineProps) {
+export const BookSpine = memo(function BookSpine({
+  book,
+  pos,
+  built = true,
+  pulled = false,
+  className = "",
+  onOpen,
+  shouldIgnoreClick,
+}: BookSpineProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Whether the card is up for keyboard focus rather than for the pointer.
+  const byKeyboard = useRef(false);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const hovered = anchor !== null && !pulled;
 
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
 
-  const enter = () => {
+  // No pointer moves a keyboard-focus card along: it follows its book as the shelf scrolls, and shows only while
+  // the book is on screen.
+  useEffect(() => {
+    if (!hovered || !byKeyboard.current) return;
+    const follow = () => ref.current && setAnchor(ref.current.getBoundingClientRect());
+    window.addEventListener("scroll", follow, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", follow, { capture: true });
+  }, [hovered]);
+
+  const enter = (keyboard: boolean) => {
     clearTimeout(leaveTimer.current);
+    byKeyboard.current = keyboard;
     if (ref.current) setAnchor(ref.current.getBoundingClientRect());
   };
   const leave = () => {
@@ -285,6 +286,7 @@ export function BookSpine({ book, pulled = false, className = "", onOpen, should
       ref={ref}
       type="button"
       data-book-id={book.id}
+      data-hovered={hovered || undefined}
       aria-label={`${book.title} by ${book.author}`}
       className={`relative shrink-0 cursor-pointer rounded-[2px] outline-none [transform-style:preserve-3d] focus-visible:ring-2 focus-visible:ring-ring/70 ${className}`}
       style={
@@ -295,35 +297,45 @@ export function BookSpine({ book, pulled = false, className = "", onOpen, should
           "--spine-w": `${book.width}px`,
         } as CSSProperties
       }
-      onPointerEnter={(e) => e.pointerType === "mouse" && enter()}
+      onPointerEnter={(e) => e.pointerType === "mouse" && enter(false)}
       onPointerLeave={leave}
-      onFocus={enter}
+      // Only keyboard focus stands in for the pointer: a press does not mean the pointer is over this book, and no
+      // pointerleave would ever take the card down. When the shelf hands focus to this book's twin as it loops,
+      // the card carries over only if the twin had it up.
+      onFocus={(e) => {
+        const from = e.relatedTarget;
+        const twin = from instanceof HTMLElement && from !== e.currentTarget && from.dataset.bookId === book.id;
+        if (twin ? from.dataset.hovered : e.currentTarget.matches(":focus-visible")) enter(true);
+      }}
       onBlur={leave}
       onClick={() => {
         if (shouldIgnoreClick?.()) return;
         setAnchor(null);
-        if (ref.current) onOpen(ref.current);
+        if (ref.current) onOpen(pos, ref.current);
       }}
     >
-      {/* Fixed size (not inset-0) so the book keeps its shape while the shelve-in gap opens. */}
+      {/* Fixed size (not inset-0) so the book keeps its shape while the shelve-in gap opens.
+          The shelf writes this span's rotateY (and hides it far off-screen) directly as it scrolls. */}
       <span
         className="absolute left-0 top-0 block [transform-style:preserve-3d]"
-        style={{ width: book.width, height: book.height, transform: "rotateY(var(--ry, 0deg))" }}
+        style={{ width: book.width, height: book.height, transform: "rotateY(0deg)" }}
       >
-        <span
-          className="absolute inset-0 block [transform-style:preserve-3d]"
-          style={{
-            transform: `rotateZ(${lean}deg) translateZ(${pull + book.depth}px) translateY(${lift}px)`,
-            transformOrigin: "0% 100%",
-            transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)",
-            // visibility, not opacity: opacity < 1 would flatten the 3D book.
-            visibility: pulled ? "hidden" : undefined,
-          }}
-        >
-          <BookBody book={book} />
-        </span>
+        {built && (
+          <span
+            className="absolute inset-0 block [transform-style:preserve-3d]"
+            style={{
+              transform: `rotateZ(${lean}deg) translateZ(${pull + book.depth}px) translateY(${lift}px)`,
+              transformOrigin: "0% 100%",
+              transition: `transform ${HOVER_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+              // visibility, not opacity: opacity < 1 would flatten the 3D book.
+              visibility: pulled ? "hidden" : undefined,
+            }}
+          >
+            <BookBody book={book} />
+          </span>
+        )}
       </span>
-      {hovered && <HoverCard book={book} anchor={anchor} />}
+      {hovered && onScreen(anchor) && <HoverCard book={book} anchor={anchor} />}
     </button>
   );
-}
+});

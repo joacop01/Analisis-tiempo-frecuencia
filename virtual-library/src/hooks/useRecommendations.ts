@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Book } from "../data/books";
+import { SHELVE_MS } from "../components/motion";
 import { supabase } from "../lib/supabase";
 
 type RecommendationRow = {
@@ -113,7 +114,7 @@ export function useRecommendations() {
     setRecommendations((prev) => [added, ...prev]);
     setJustAdded(added.id);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setJustAdded(null), 1400);
+    timer.current = setTimeout(() => setJustAdded(null), SHELVE_MS + 300);
   }, []);
 
   return { enabled: supabase !== null, recommendations, justAdded, recommend };

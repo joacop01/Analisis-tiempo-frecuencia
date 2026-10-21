@@ -23,10 +23,12 @@ Requiere Node 22.18 o superior.
 cd virtual-library
 npm install
 cp .env.example .env   # opcional: claves de IA y Supabase
-npm run dev            # http://localhost:3000
+npm run preview        # compila y abre el sitio en http://localhost:3000
 ```
 
-Para producción: `npm run build` y luego `npm start` (servidor Node en `.output/`).
+`npm run preview` es lo que conviene para **ver y usar** el sitio: compila la versión de
+producción, que es la rápida. `npm run dev` sirve para editar el código (se recarga solo
+con cada cambio), pero es bastante más lento, sobre todo al cargar.
 
 ## 1. Cargar tu biblioteca de Goodreads
 
@@ -35,11 +37,23 @@ La estantería empieza vacía: el sitio no inventa libros.
 1. En Goodreads: **My Books → Import and export → Export Library**. Esperá el mail y
    descargá `goodreads_library_export.csv`.
 2. Copialo dentro de `virtual-library/` (está en `.gitignore`, no se sube al repo).
-3. Corré:
+3. Corré (poné tu email después de `--contact`):
 
    ```bash
-   npm run import:goodreads -- goodreads_library_export.csv
+   npm run import:goodreads -- goodreads_library_export.csv --contact tu@email.com
    ```
+
+Open Library permite 1 consulta por segundo a quien no se identifica, y 3 por segundo
+si la consulta lleva un email de contacto. Por eso `--contact` hace la importación
+unas 3 veces más rápida: unos 2–3 minutos para 300 libros, contra unos 7 sin el email.
+El email solo viaja en el encabezado de las consultas a Open Library. Al empezar, el
+script te dice cuánto va a tardar, y mientras corre muestra cuánto falta.
+
+Lo que ya buscó queda guardado en `.cache/` (no se sube al repo). Si lo cortás con
+Ctrl+C, o si algún libro falla porque Open Library no respondió, corré el mismo comando
+otra vez: retoma desde donde quedó y completa solo lo que falta. Volver a importar
+después de agregar libros en Goodreads tarda segundos. Con `--refresh` se vuelve a
+buscar todo de cero.
 
 El script (`scripts/import-goodreads.ts`) reescribe `src/data/books.ts`:
 
@@ -84,11 +98,14 @@ Sin esas variables el botón **Recommend a book** y la segunda estantería no se
 
 ## Personalizar
 
+- **Velocidad de las animaciones**: todos los tiempos están juntos en
+  `src/components/motion.ts`, en milisegundos. Por ejemplo `HOVER_MS` (el libro que se
+  adelanta al pasar el mouse) o `PULL_MS` (el libro que sale de la estantería). Un
+  número más chico hace la animación más rápida.
+
 - **Título**: el texto en `src/components/TypedTitle.tsx` y el `head()` de
   `src/routes/index.tsx` (título y metadatos `og:`/`twitter:`).
 - **Sensación del hover**: `HOVER_PULL` (96) y `HOVER_LIFT` (-26) en `BookSpine.tsx`.
-- **Velocidad del libro al salir**: la transición de 900 ms y el cierre a 620 ms en
-  `BookDetail.tsx`.
 - **Paleta**: los tokens oklch de `:root` en `src/styles.css`; los componentes no
   tienen colores fijos.
 

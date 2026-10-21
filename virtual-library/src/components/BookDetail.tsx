@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Book } from "../data/books";
 import { COVER_W } from "./bookFaces";
-import { BookBody } from "./BookSpine";
+import { BookBody, shelfCover } from "./BookSpine";
+import { BACKDROP_MS, PANEL_DELAY_MS, PANEL_RISE_MS, PULL_MS, RETRACT_CLOSE_MS } from "./motion";
 
 export type Rect = { left: number; top: number; width: number; height: number };
 
-const PULL_TRANSITION = "transform 900ms cubic-bezier(0.16, 1, 0.3, 1)";
-const RETRACT_CLOSE_MS = 620;
+const PULL_TRANSITION = `transform ${PULL_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`;
 const SHELF_POSE = "translate3d(0, 0, 0) scale(1) rotateY(-26deg)";
 const MONTH_YEAR = /^[A-Z][a-z]{2} \d{4}$/;
 
@@ -57,8 +57,28 @@ function useArrived() {
   return arrived;
 }
 
+/** The large cover, once it has loaded; until then the shelf-size one, which is already on screen. */
+function useFullCover(book: Book) {
+  const [full, setFull] = useState<string | null>(null);
+  useEffect(() => {
+    if (!book.cover || shelfCover(book.cover) === book.cover) return;
+    let live = true;
+    const img = new Image();
+    img.src = book.cover;
+    img.decode().then(
+      () => live && setFull(book.cover),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [book.cover]);
+  return full ?? (book.cover ? shelfCover(book.cover) : undefined);
+}
+
 function PulledBook({ book, rect, layout, closing }: { book: Book; rect: Rect; layout: Layout; closing: boolean }) {
   const out = useArrived() && !closing;
+  const cover = useFullCover(book);
   // Hinge (the spine's right edge) is the transform origin: the front cover swings to face you.
   const dx = layout.coverLeft - (rect.left + book.width);
   const dy = layout.coverTop - rect.top;
@@ -77,7 +97,7 @@ function PulledBook({ book, rect, layout, closing }: { book: Book; rect: Rect; l
         transition: PULL_TRANSITION,
       }}
     >
-      <BookBody book={book} showPages={false} />
+      <BookBody book={book} showPages={false} coverSrc={cover} />
     </div>
   );
 }
@@ -170,21 +190,22 @@ export function BookDetail({ book, rect, canStep, onPrev, onNext, onClose }: Boo
       className="fixed inset-0 z-[90] outline-none"
     >
       <div
-        className="absolute inset-0 bg-background/70 backdrop-blur-xl transition-opacity duration-700 ease-out"
-        style={{ opacity: shown && !closing ? 1 : 0 }}
+        className="absolute inset-0 bg-background/70 backdrop-blur-xl transition-opacity ease-out"
+        style={{ opacity: shown && !closing ? 1 : 0, transitionDuration: `${BACKDROP_MS}ms` }}
         onClick={retract}
       />
 
       {/* Soft ground shadow under the pulled-out cover (kept outside the 3D context). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute rounded-sm bg-shade/30 blur-2xl transition-opacity duration-700"
+        className="pointer-events-none absolute rounded-sm bg-shade/30 blur-2xl transition-opacity"
         style={{
           left: layout.coverLeft + 10,
           top: layout.coverTop + 22,
           width: layout.coverW,
           height: layout.coverH,
           opacity: shown && !closing ? 1 : 0,
+          transitionDuration: `${BACKDROP_MS}ms`,
         }}
       />
 
@@ -202,7 +223,11 @@ export function BookDetail({ book, rect, canStep, onPrev, onNext, onClose }: Boo
         className="absolute flex flex-col overflow-y-auto transition-opacity duration-300"
         style={{ ...panelStyle, opacity: closing ? 0 : 1 }}
       >
-        <div key={book.id} className="my-auto animate-rise [animation-delay:260ms]">
+        <div
+          key={book.id}
+          className="my-auto animate-rise"
+          style={{ animationDelay: `${PANEL_DELAY_MS}ms`, animationDuration: `${PANEL_RISE_MS}ms` }}
+        >
           {label && <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</p>}
           <h2 className="mt-3 font-display text-4xl font-light leading-[1.05] text-foreground md:text-5xl">
             {book.title}
