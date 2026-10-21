@@ -122,7 +122,13 @@ function formatMonth(goodreadsDate: string): string {
 }
 
 // "The Name of the Wind (The Kingkiller Chronicle, #1)" → "The Name of the Wind"
-const stripSeries = (title: string) => title.replace(/\s*\([^()]*#\d+(\.\d+)?\)\s*$/, "").trim();
+// "Title (Spanish Edition)" / "(Edición Kindle)" → "Title" (repeatedly: series and edition can both be there).
+const TRAILING_SERIES_OR_EDITION = /\s*\((?:[^()]*#\d+(?:\.\d+)?|[^()]*\b(?:edition|edici[oó]n)\b[^()]*)\)\s*$/i;
+const stripSeries = (title: string) => {
+  let t = title.trim();
+  for (let prev = ""; prev !== t; ) [prev, t] = [t, t.replace(TRAILING_SERIES_OR_EDITION, "").trim()];
+  return t;
+};
 
 // ── Cache ───────────────────────────────────────────────────────────────────
 // API responses keyed by URL (trimmed to the fields used here; null = not on
@@ -743,17 +749,36 @@ function cleanBlurb(raw = ""): string {
   return end > 200 ? cut.slice(0, end + 1) : `${cut.replace(/\s+\S*$/, "")}…`;
 }
 
+// Matched against shelves and subjects lower-cased, without accents, and with hyphens and underscores as spaces, so
+// Goodreads shelves ("ciencia-ficcion") and English or Spanish Open Library subjects ("Ciencia ficción") read alike.
+const GENRE_PATTERNS: [(typeof GENRES)[number], RegExp][] = [
+  [
+    "Mystery & Thriller",
+    /mystery|thriller|detective|crime|suspense|murder|misterio|policia(l|ca|co)|suspenso|novela negra/,
+  ],
+  ["Sci-Fi", /science fiction|sci ?fi|space opera|dystopia|cyberpunk|ciencia ficcion|ficcion cientifica|distopia/],
+  [
+    "Fantasy",
+    /fantasy|magic|dragons|fae\b|faerie|fairies|wizards|witches|fantasia|literatura fantastica|dragones|hadas/,
+  ],
+  ["Romance", /romance|love stories|romantic|novela rosa|historias de amor/],
+];
+const NONFICTION =
+  /non ?fiction|biography|memoir|history|essays|self help|philosophy|science\b|no ficcion|biografia|memorias|historia|ensayo|autoayuda|filosofia|divulgacion|ciencia\b/;
+const FICTION = /(?<!non ?)fiction|novel|literary|(?<!no )ficcion|novela|narrativa|literatura|cuentos/;
+
 function assignGenres(shelves: string, subjects: string[]): string[] {
-  const text = [shelves, ...subjects].join(" | ").toLowerCase();
-  const genres: (typeof GENRES)[number][] = [];
-  if (/mystery|thriller|detective|crime|suspense|murder/.test(text)) genres.push("Mystery & Thriller");
-  if (/science fiction|sci-fi|scifi|space opera|dystopia|cyberpunk/.test(text)) genres.push("Sci-Fi");
-  if (/fantasy|magic|dragons|fae\b|faerie|fairies|wizards|witches/.test(text)) genres.push("Fantasy");
-  if (/romance|love stories|romantic/.test(text)) genres.push("Romance");
+  const text = [shelves, ...subjects]
+    .join(" | ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-_]/g, " ");
+  const genres = GENRE_PATTERNS.filter(([, re]) => re.test(text)).map(([genre]) => genre);
   if (genres.length) return genres.slice(0, 3);
-  if (/non-?fiction|biography|memoir|history|essays|self-help|philosophy|science\b/.test(text)) return ["Nonfiction"];
+  if (NONFICTION.test(text)) return ["Nonfiction"];
   // "Literary Fiction" and friends → Fiction; anything untagged defaults to Nonfiction.
-  return /(?<!non-?)fiction|novel|literary/.test(text) ? ["Fiction"] : ["Nonfiction"];
+  return FICTION.test(text) ? ["Fiction"] : ["Nonfiction"];
 }
 
 function bookLiteral(book: Book): string {

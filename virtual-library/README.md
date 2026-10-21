@@ -66,9 +66,10 @@ El script (`scripts/import-goodreads.ts`) reescribe `src/data/books.ts`:
 - Deriva encuadernación, tamaño, inclinación, profundidad y desgaste a partir de la
   cantidad de páginas y de un hash de la clave de Open Library (siempre da lo mismo).
 - Asigna géneros solo de este conjunto: Fiction, Nonfiction, Sci-Fi,
-  Mystery & Thriller, Fantasy, Romance. Los botones de filtro se generan solos.
-- Quita la serie del título ("The Name of the Wind (The Kingkiller Chronicle, #1)" →
-  "The Name of the Wind").
+  Mystery & Thriller, Fantasy, Romance. Usa tus estantes de Goodreads y los temas de
+  Open Library, en inglés o en castellano. Los botones de filtro se generan solos.
+- Quita del título la serie y la edición ("The Name of the Wind (The Kingkiller
+  Chronicle, #1)" → "The Name of the Wind"; "Sapiens (Spanish Edition)" → "Sapiens").
 
 Si preferís no usar el script, también podés pasarle el CSV a un asistente de IA junto
 con el prompt de la sección 4 de la guía; el resultado es el mismo archivo.
